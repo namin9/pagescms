@@ -5,6 +5,7 @@ import { handleInstallationWebhookEvent } from "@/lib/github-webhook-installatio
 import { handlePushWebhookEvent } from "@/lib/github-webhook-push";
 
 export const runtime = "nodejs";
+export const runtime = "edge";
 export const maxDuration = 60;
 
 /**

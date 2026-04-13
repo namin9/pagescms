@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+export const runtime = "edge";
+
 function isAllowedOrigin(originHeader: string, hostHeader: string): boolean {
 	try {
 		const originUrl = new URL(originHeader);
