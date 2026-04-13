@@ -12,6 +12,16 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
+const tenantTable = pgTable("tenant", {
+  id: text("id").notNull().primaryKey(),
+  name: text("name").notNull(),
+  githubOwner: text("github_owner").notNull(),
+  githubRepo: text("github_repo").notNull(),
+  githubBranch: text("github_branch").notNull().default("main"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
 const userTable = pgTable("user", {
   id: text("id").notNull().primaryKey(),
   name: text("name").notNull(),
@@ -19,9 +29,12 @@ const userTable = pgTable("user", {
   githubUsername: text("github_username"),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
+  tenantId: text("tenant_id").references(() => tenantTable.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow()
-});
+}, table => ({
+  idx_user_tenantId: index("idx_user_tenantId").on(table.tenantId)
+}));
 
 const sessionTable = pgTable("session", {
   id: text("id").notNull().primaryKey(),
@@ -192,24 +205,6 @@ const actionRunTable = pgTable("action_run", {
 
 export {
   tenantTable,
-  userTable,
-  sessionTable,
-  accountTable,
-  verificationTable,
-  githubInstallationTokenTable,
-  collaboratorTable,
-  configTable,
-  cacheFileTable,
-  cacheFileMetaTable,
-  cachePermissionTable,
-  actionRunTable
-};
-.on(table.owner, table.repo, table.status),
-  idx_action_run_context: index("idx_action_run_context").on(table.owner, table.repo, table.contextType, table.contextName, table.contextPath),
-  idx_action_run_workflowRunId: uniqueIndex("idx_action_run_workflowRunId").on(table.workflowRunId),
-}));
-
-export {
   userTable,
   sessionTable,
   accountTable,

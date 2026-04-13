@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { tenantTable, userTable } from "@/db/schema";
-import { getSession } from "@/lib/session-server";
+import { getServerSession } from "@/lib/session-server";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { desc, eq } from "drizzle-orm";
@@ -11,7 +11,7 @@ import { desc, eq } from "drizzle-orm";
  * 어드민 권한 체크 헬퍼
  */
 async function ensureAdmin() {
-  const session = await getSession();
+  const session = await getServerSession();
   const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim());
   
   if (!session?.user?.email || !adminEmails.includes(session.user.email)) {

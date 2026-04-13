@@ -1,10 +1,10 @@
-import { getSession } from "@/lib/session-server";
+import { getServerSession } from "@/lib/session-server";
 import { redirect } from "next/navigation";
 import { getTenantsAction, getUsersAction } from "@/lib/actions/super-admin";
 import { SuperAdminContent } from "./content";
 
 export default async function SuperAdminPage() {
-  const session = await getSession();
+  const session = await getServerSession();
   const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim());
 
   if (!session?.user?.email || !adminEmails.includes(session.user.email)) {

@@ -1,6 +1,6 @@
 "use server";
 
-import { getSession } from "@/lib/session-server";
+import { getServerSession } from "@/lib/session-server";
 import { getMasterOctokit } from "@/lib/utils/octokit";
 import yaml from "js-yaml";
 import { revalidatePath } from "next/cache";
@@ -17,7 +17,7 @@ type CreateCollectionParams = {
 
 export async function createCollectionAction(params: CreateCollectionParams) {
   const { collection } = params;
-  const session = await getSession();
+  const session = await getServerSession();
 
   // 1. 세션 및 테넌트 정보 확인 (보안 강화)
   if (!session?.user?.tenant) {
