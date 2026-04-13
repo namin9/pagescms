@@ -395,7 +395,7 @@ export async function POST(
         userId: user.id,
         name: user.name,
         email: user.email,
-        githubUsername: user.githubUsername ?? null,
+        githubUsername: (user as any).githubUsername ?? null,
         image: user.image ?? null,
       },
       context: {
