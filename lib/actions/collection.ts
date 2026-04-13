@@ -2,6 +2,7 @@
 
 import { getServerSession } from "@/lib/session-server";
 import { getMasterOctokit } from "@/lib/utils/octokit";
+// @ts-ignore
 import yaml from "js-yaml";
 import { revalidatePath } from "next/cache";
 
