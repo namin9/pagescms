@@ -21,11 +21,11 @@ export async function createCollectionAction(params: CreateCollectionParams) {
   const session = await getServerSession();
 
   // 1. 세션 및 테넌트 정보 확인 (보안 강화)
-  if (!session?.user?.tenant) {
+  if (!session?.user || !(session.user as any).tenant) {
     throw new Error("로그인이 필요하거나 테넌트 정보가 없습니다.");
   }
 
-  const { owner, repo, branch } = session.user.tenant;
+  const { owner, repo, branch } = (session.user as any).tenant;
   const octokit = getMasterOctokit();
 
   // 2. 설정 파일 (.pagescms.yml 또는 pages.yml) 찾기
