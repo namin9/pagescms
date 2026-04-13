@@ -1,5 +1,4 @@
 import { after } from "next/server";
-import crypto from "crypto";
 import { handleActionWebhookEvent } from "@/lib/github-webhook-actions";
 import { handleInstallationWebhookEvent } from "@/lib/github-webhook-installation";
 import { handlePushWebhookEvent } from "@/lib/github-webhook-push";
@@ -23,6 +22,29 @@ const processWebhookEvent = async (event: string | null, data: any) => {
   if (await handleActionWebhookEvent(event, data)) return;
 };
 
+async function verifySignature(secret: string, header: string, payload: string) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
+  const digest = "sha256=" + Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  // Timing-safe comparison
+  if (header.length !== digest.length) return false;
+  let result = 0;
+  for (let i = 0; i < header.length; i++) {
+    result |= header.charCodeAt(i) ^ digest.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 export async function POST(request: Request) {
   try {
     const signature = request.headers.get("X-Hub-Signature-256");
@@ -35,18 +57,7 @@ export async function POST(request: Request) {
       return Response.json(null, { status: 500 });
     }
 
-    const hmac = crypto.createHmac("sha256", secret);
-    const digest = `sha256=${hmac.update(body).digest("hex")}`;
-    if (!signature) {
-      return Response.json(null, { status: 401 });
-    }
-
-    const signatureBuffer = Buffer.from(signature, "utf8");
-    const digestBuffer = Buffer.from(digest, "utf8");
-    if (
-      signatureBuffer.length !== digestBuffer.length
-      || !crypto.timingSafeEqual(signatureBuffer, digestBuffer)
-    ) {
+    if (!signature || !(await verifySignature(secret, signature, body))) {
       return Response.json(null, { status: 401 });
     }
 

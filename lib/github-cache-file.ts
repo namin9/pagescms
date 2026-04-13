@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { cacheFileMetaTable, cacheFileTable } from "@/db/schema";
 import { createOctokitInstance } from "@/lib/utils/octokit";
-import { getParentPath } from "@/lib/utils/file";
+import { getParentPath, getFileName } from "@/lib/utils/file";
 import { getCacheFileMeta, upsertCacheFileMeta } from "@/lib/github-cache-meta";
 import {
   BRANCH_CACHE_SCOPE,
@@ -23,7 +23,6 @@ import {
   waitForScopeAndBranchMeta,
 } from "@/lib/github-cache-folders";
 import { Repo } from "@/types/repo";
-import path from "path";
 
 type FileChange = {
   path: string;
@@ -553,7 +552,7 @@ const updateMultipleFilesCache = async (
 
         const entryData = {
           context, owner: lowerOwner, repo: lowerRepo, branch,
-          path: file.path, parentPath, name: path.basename(file.path),
+          path: file.path, parentPath, name: getFileName(file.path),
           type: 'file' as 'file' | 'dir',
           content: context === 'collection' ? fileData.text : null,
           sha: fileData.oid, size: fileData.byteSize, downloadUrl: null,
@@ -670,7 +669,7 @@ const updateFileCache = async (
           const now = new Date();
           const entryData = {
             context, owner: lowerOwner, repo: lowerRepo, branch,
-            path: operation.path, parentPath, name: path.basename(operation.path),
+            path: operation.path, parentPath, name: getFileName(operation.path),
             type: 'file' as 'file' | 'dir',
             content: context === 'collection' ? operation.content : null,
             sha: operation.sha, size: operation.size, downloadUrl: operation.downloadUrl,
@@ -692,7 +691,7 @@ const updateFileCache = async (
 
         if (shouldPreserveRename) {
           const renameNow = new Date();
-          const newName = path.basename(operation.newPath);
+          const newName = getFileName(operation.newPath);
 
           await db.update(cacheFileTable)
             .set({

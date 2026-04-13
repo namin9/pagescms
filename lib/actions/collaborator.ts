@@ -13,7 +13,6 @@ import { db } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
 import { collaboratorTable, verificationTable } from "@/db/schema";
 import { z } from "zod";
-import { randomBytes, randomUUID } from "crypto";
 import { findVerifiedUserByEmail, normalizeEmail } from "@/lib/collaborator-access";
 
 const parseInviteEmails = (raw: FormDataEntryValue | null) => {
@@ -63,7 +62,8 @@ const getDisplayNameFromEmail = (email: string) => {
 
 const generateMagicLinkToken = () => {
   const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const bytes = randomBytes(32);
+  const bytes = new Uint8Array(32);
+  globalThis.crypto.getRandomValues(bytes);
   let token = "";
 
   for (let i = 0; i < 32; i += 1) {
@@ -91,7 +91,7 @@ const createCollaboratorInviteMagicLink = async ({
   );
 
   await db.insert(verificationTable).values({
-    id: randomUUID(),
+    id: globalThis.crypto.randomUUID(),
     identifier: token,
     value: JSON.stringify({
       email,
