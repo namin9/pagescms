@@ -187,8 +187,8 @@ const handleAddCollaborator = async (prevState: any, formData: FormData) => {
               inviteUrl,
               repoName: `${formData.get("owner")}/${formData.get("repo")}`,
               email: normalizedEmail,
-              invitedByName: user.name || user.githubUsername || user.email,
-              invitedByUrl: `https://github.com/${user.githubUsername}`,
+              invitedByName: user.name || (user as any).githubUsername || user.email,
+              invitedByUrl: (user as any).githubUsername ? `https://github.com/${(user as any).githubUsername}` : undefined,
             }),
           );
           await sendEmail({
@@ -208,8 +208,8 @@ const handleAddCollaborator = async (prevState: any, formData: FormData) => {
               email: normalizedEmail,
               repoName: `${formData.get("owner")}/${formData.get("repo")}`,
               repoUrl,
-              invitedByName: user.name || user.githubUsername || user.email,
-              invitedByUrl: `https://github.com/${user.githubUsername}`,
+              invitedByName: user.name || (user as any).githubUsername || user.email,
+              invitedByUrl: (user as any).githubUsername ? `https://github.com/${(user as any).githubUsername}` : undefined,
             }),
           );
           await sendEmail({
