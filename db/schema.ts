@@ -2,7 +2,6 @@ import {
   sqliteTable,
   text,
   integer,
-  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
@@ -155,9 +154,9 @@ export const actionRunTable = sqliteTable("action_run", {
   status: text("status").notNull(),
   conclusion: text("conclusion"),
   htmlUrl: text("html_url"),
-  triggeredBy: text("triggered_by").notNull(), // JSON as text in SQLite
-  failure: text("failure"),
-  payload: text("payload").notNull(),
+  triggeredBy: text("triggered_by", { mode: "json" }).notNull(), 
+  failure: text("failure", { mode: "json" }),
+  payload: text("payload", { mode: "json" }).notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(strftime('%s', 'now'))`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(strftime('%s', 'now'))`),
   completedAt: integer("completed_at", { mode: "timestamp" }),
