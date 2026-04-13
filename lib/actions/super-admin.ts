@@ -56,15 +56,23 @@ export async function createTenantAction(data: {
  */
 export async function getUsersAction() {
   await ensureAdmin();
-  const users = await db.query.userTable.findMany({
-    with: {
-      tenant: true,
-    } as any,
-  });
   
-  // 만약 drizzle query가 tenant 관계를 인식하지 못하면 수동 조인 필요
-  // 여기서는 간단히 리스트만 반환하고 필요시 보강
-  return users;
+  const users = await db.select({
+    id: userTable.id,
+    name: userTable.name,
+    email: userTable.email,
+    tenantId: userTable.tenantId,
+    createdAt: userTable.createdAt,
+    tenantName: tenantTable.name,
+  })
+  .from(userTable)
+  .leftJoin(tenantTable, eq(userTable.tenantId, tenantTable.id));
+  
+  // 클라이언트에서 tenant.name으로 접근하므로 구조를 맞춰줌
+  return users.map(u => ({
+    ...u,
+    tenant: u.tenantName ? { name: u.tenantName } : null
+  }));
 }
 
 /**

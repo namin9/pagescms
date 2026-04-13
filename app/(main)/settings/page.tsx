@@ -60,7 +60,7 @@ export default async function Page() {
           <Profile
             name={user.name}
             email={user.email}
-            githubUsername={user.githubUsername}
+            githubUsername={(user as any).githubUsername}
           />
 
           <Card>
@@ -74,7 +74,7 @@ export default async function Page() {
               <Identities
                 email={user.email}
                 githubConnected={githubConnected}
-                githubUsername={user.githubUsername}
+                githubUsername={(user as any).githubUsername}
                 githubManageUrl={githubManageUrl}
               />
             </CardContent>

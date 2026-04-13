@@ -1,22 +1,21 @@
 import "./envConfig";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./schema";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __pagesCmsPostgresClient: ReturnType<typeof postgres> | undefined;
-}
+/**
+ * Cloudflare D1 Database adapter for Drizzle.
+ * Ensure you have defined a 'DB' binding in your Cloudflare Pages/Workers settings.
+ */
 
-const client =
-  globalThis.__pagesCmsPostgresClient
-  ?? postgres(process.env.DATABASE_URL!, {
-    // Keep conservative pool size in dev to avoid local connection spikes.
-    max: parseInt(process.env.POSTGRES_MAX_CONNECTIONS || "5", 10),
-  });
+const getDb = () => {
+  // Cloudflare Pages/Workers environment
+  const runtimeDb = (process.env as any).DB;
+  
+  if (!runtimeDb) {
+    throw new Error("D1 binding 'DB' not found. Please configure it in your Cloudflare project settings.");
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  globalThis.__pagesCmsPostgresClient = client;
-}
+  return drizzle(runtimeDb, { schema });
+};
 
-export const db = drizzle(client, { schema });
+export const db = getDb();
