@@ -11,5 +11,5 @@ export const getBaseUrl = () => {
     return DEV_BASE_URL;
   }
 
-  throw new Error("Missing BASE_URL. Set BASE_URL in production.");
+  return process.env.CF_PAGES_URL || "https://cms-5f9.pages.dev";
 };
