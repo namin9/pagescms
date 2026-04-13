@@ -100,9 +100,9 @@ export function Entry({
   const [displayTitle, setDisplayTitle] = useState<string>(() => {
     if (title) return title;
     if (initialPath && initialPath !== ".pages.yml") {
-      return `Editing "${getFileName(normalizePath(initialPath))}"`;
+      return `"${getFileName(normalizePath(initialPath))}" 수정 중`;
     }
-    return "Edit";
+    return "수정";
   });
   const [isLoading, setIsLoading] = useState(path ? true : false);
   const [isSaving, setIsSaving] = useState(false);
@@ -214,7 +214,7 @@ export function Entry({
     const response = await fetch(apiUrl);
     const data = await requireApiSuccess<any>(
       response,
-      "Failed to fetch entry",
+      "항목을 불러오지 못했습니다.",
     );
     return data.data as EntryData;
   }, []);
@@ -258,15 +258,15 @@ export function Entry({
       const titleValue = hasPrimaryValue
         ? String(primaryValue)
         : getFileName(normalizePath(path));
-      setDisplayTitle(`Editing "${titleValue}"`);
+      setDisplayTitle(`"${titleValue}" 수정 중`);
     } else if (!title && path && path !== ".pages.yml") {
-      setDisplayTitle(`Editing "${getFileName(normalizePath(path))}"`);
+      setDisplayTitle(`"${getFileName(normalizePath(path))}" 수정 중`);
     }
   }, [initialPath, path, schema, swrEntryData, title]);
 
   useEffect(() => {
     if (!swrEntryError) return;
-    const message = swrEntryError instanceof Error ? swrEntryError.message : "Failed to fetch entry.";
+    const message = swrEntryError instanceof Error ? swrEntryError.message : "항목을 불러오지 못했습니다.";
     setError(message);
     setIsLoading(false);
   }, [swrEntryError]);
@@ -283,14 +283,13 @@ export function Entry({
   );
 
   const fetchEntryHistory = useCallback(async ([apiUrl]: readonly [string, string]): Promise<EntryHistoryItem[]> => {
-    const response = await fetch(apiUrl);
-    const data = await requireApiSuccess<any>(
-      response,
-      "Failed to fetch entry's history",
-    );
-    return data.data as EntryHistoryItem[];
+  const response = await fetch(apiUrl);
+  const data = await requireApiSuccess<any>(
+    response,
+    "항목 히스토리를 불러오지 못했습니다.",
+  );
+  return data.data as EntryHistoryItem[];
   }, []);
-
   const { data: historyData } = useSWR<EntryHistoryItem[]>(
     historyKey,
     fetchEntryHistory,
@@ -320,20 +319,20 @@ export function Entry({
         const normalizedFilename = normalizePath(trimmedFilename).split("/").pop() || "";
 
         if (showFilenameField && !normalizedFilename) {
-          throw new Error("Filename is required.");
+          throw new Error("파일 이름이 필요합니다.");
         }
 
         if (!savePath) {
-          if (!schema) throw new Error("Cannot create entry without schema.");
-          if (!canCreate) throw new Error("Creating entries in this content item isn't allowed.");
+          if (!schema) throw new Error("스키마 없이 항목을 생성할 수 없습니다.");
+          if (!canCreate) throw new Error("이 항목에서 글을 생성할 수 없습니다.");
           const basePath = parent ?? schema.path;
-          if (basePath == null) throw new Error("Cannot create entry without a target path.");
+          if (basePath == null) throw new Error("저장 경로 없이 항목을 생성할 수 없습니다.");
           const generatedFilename = showFilenameField
             ? normalizedFilename
             : generateFilename(schema.filename, schema, contentObject);
           savePath = joinPathSegments([basePath, generatedFilename]);
         } else if (filenameChanged && !canRename && schemaType === "collection") {
-          throw new Error("Renaming this entry isn't allowed.");
+          throw new Error("이 항목의 이름을 변경할 수 없습니다.");
         } else if (
           showFilenameField
           && filenameFieldMode === "enabled"
@@ -354,7 +353,7 @@ export function Entry({
               }),
             },
           );
-          await requireApiSuccess<any>(renameResponse, "Failed to rename file");
+          await requireApiSuccess<any>(renameResponse, "파일 이름 변경에 실패했습니다.");
           savePath = newPath;
           setPath(newPath);
           setIsFilenameUnlocked(false);
@@ -378,7 +377,7 @@ export function Entry({
         });
         const data = await requireApiSuccess<any>(
           response,
-          "Failed to save file",
+          "파일 저장에 실패했습니다.",
         );
         
         if (data.data.sha !== sha) setSha(data.data.sha);
@@ -399,12 +398,12 @@ export function Entry({
     });
 
     toast.promise(savePromise, {
-      loading: "Saving your file",
+      loading: "파일을 저장하는 중...",
       success: (response: ApiSuccess<EntryData>) => {
         if (onSave) onSave(response.data);
         return response.message;
       },
-      error: (error: unknown) => error instanceof Error ? error.message : "Failed to save file.",
+      error: (error: unknown) => error instanceof Error ? error.message : "파일 저장에 실패했습니다.",
     });
 
     try {
@@ -565,7 +564,7 @@ export function Entry({
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center">
                   <BreadcrumbEllipsis className="h-4 w-4" />
-                  <span className="sr-only">Show hidden segments</span>
+                  <span className="sr-only">숨겨진 경로 보기</span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                   {middleEntries.map((entry) => (
@@ -699,10 +698,10 @@ export function Entry({
                 )
               )
             }
-            aria-label="Save"
+            aria-label="저장하기"
           >
             <Save className="size-4 sm:hidden" />
-            <span className="hidden sm:inline">Save</span>
+            <span className="hidden sm:inline">저장하기</span>
           </Button>
           {path && (
             <ButtonGroup>
@@ -775,18 +774,18 @@ export function Entry({
         <div className="absolute inset-0 p-4 md:p-6 flex items-center justify-center">
           <Empty className="max-w-[420px] flex-none">
             <EmptyHeader>
-              <EmptyTitle>{isSettingsPage ? "Configuration not found" : "File not found"}</EmptyTitle>
+              <EmptyTitle>{isSettingsPage ? "설정을 찾을 수 없습니다" : "파일을 찾을 수 없습니다"}</EmptyTitle>
               <EmptyDescription>
                 {isSettingsPage
-                  ? "The configuration file \".pages.yml\" does not exist yet."
-                  : `The file "${path ?? schema?.path ?? "unknown"}" does not exist yet.`}
+                  ? "\".pages.yml\" 설정 파일이 아직 존재하지 않습니다."
+                  : `"${path ?? schema?.path ?? "알 수 없음"}" 파일이 아직 존재하지 않습니다.`}
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               {isSettingsPage ? (
-                <EmptyCreate type="settings">Create configuration file</EmptyCreate>
+                <EmptyCreate type="settings">설정 파일 생성하기</EmptyCreate>
               ) : canCreate ? (
-                <EmptyCreate type="content" name={schema?.name ?? name}>Create file</EmptyCreate>
+                <EmptyCreate type="content" name={schema?.name ?? name}>파일 생성하기</EmptyCreate>
               ) : null}
             </EmptyContent>
           </Empty>
@@ -797,7 +796,7 @@ export function Entry({
         <div className="absolute inset-0 p-4 md:p-6 flex items-center justify-center">
           <Empty className="max-w-[420px] flex-none">
             <EmptyHeader>
-              <EmptyTitle>Something went wrong</EmptyTitle>
+              <EmptyTitle>문제가 발생했습니다</EmptyTitle>
               <EmptyDescription>{error}</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
@@ -805,7 +804,7 @@ export function Entry({
                 className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90"
                 href={`/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/configuration`}
               >
-                Go to configuration
+                설정으로 이동
               </Link>
             </EmptyContent>
           </Empty>
@@ -819,9 +818,9 @@ export function Entry({
       <div className="absolute inset-0 p-4 md:p-6 flex items-center justify-center">
         <Empty className="max-w-[420px] flex-none">
           <EmptyHeader>
-            <EmptyTitle>Creating entries is disabled</EmptyTitle>
+            <EmptyTitle>항목 생성이 비활성화되었습니다</EmptyTitle>
             <EmptyDescription>
-              New entries are not allowed for this collection.
+              이 컬렉션에는 새로운 항목을 추가할 수 없습니다.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
@@ -829,7 +828,7 @@ export function Entry({
               className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90"
               href={`/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/collection/${encodeURIComponent(name)}`}
             >
-              Back to collection
+              컬렉션으로 돌아가기
             </Link>
           </EmptyContent>
         </Empty>
@@ -850,9 +849,9 @@ export function Entry({
                 <InputGroupInput
                   value={filenameValue}
                   onChange={(event) => setFilenameValue(event.target.value)}
-                  placeholder="Filename"
+                  placeholder="파일 이름"
                   disabled={path ? !isFilenameUnlocked : false}
-                  aria-label="Filename"
+                  aria-label="파일 이름"
                 />
                 {path && filenameFieldMode === "enabled" && canRename && (
                   <InputGroupAddon align="inline-end">
@@ -863,7 +862,7 @@ export function Entry({
                           variant="ghost"
                           size="icon-xs"
                           onClick={() => setIsFilenameUnlocked((prev) => !prev)}
-                          aria-label={isFilenameUnlocked ? "Lock filename" : "Unlock filename"}
+                          aria-label={isFilenameUnlocked ? "파일 이름 잠그기" : "파일 이름 잠금 해제"}
                         >
                           {isFilenameUnlocked
                             ? <LockOpen className="size-3.5" />
@@ -871,7 +870,7 @@ export function Entry({
                         </InputGroupButton>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {isFilenameUnlocked ? "Lock filename" : "Unlock to edit"}
+                        {isFilenameUnlocked ? "파일 이름 잠그기" : "수정하려면 잠금 해제"}
                       </TooltipContent>
                     </Tooltip>
                   </InputGroupAddon>

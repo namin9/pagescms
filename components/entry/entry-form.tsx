@@ -151,7 +151,7 @@ const getCollapsibleItemLabel = (
     );
   }
 
-  return `Item ${index !== undefined ? `#${index + 1}` : ""}`;
+  return `항목 ${index !== undefined ? `${index + 1}` : ""}`;
 };
 
 const hasCollapsibleSummary = (field: Field) =>
@@ -279,20 +279,20 @@ const ListItemRow = memo(function ListItemRow({
             </TooltipTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Remove this item?</AlertDialogTitle>
+                <AlertDialogTitle>이 항목을 삭제하시겠습니까?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone.
+                  이 작업은 되돌릴 수 없습니다.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>취소</AlertDialogCancel>
                 <AlertDialogAction onClick={() => onRemoveConfirm(index)}>
-                  Remove
+                  삭제
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <TooltipContent>Remove item</TooltipContent>
+          <TooltipContent>항목 삭제</TooltipContent>
         </Tooltip>
       )}
     </SortableItem>
@@ -475,13 +475,13 @@ const ListField = ({
               {field.required && (
                 <Badge variant="secondary" className="text-muted-foreground">
                   <Asterisk className="-ml-1 -mr-0.5" />
-                  Required
+                  필수
                 </Badge>
               )}
               {hasExplicitReadonly(field) && (
                 <Badge variant="secondary" className="text-muted-foreground">
                   <Ban className="-ml-0.5" />
-                  Readonly
+                  읽기 전용
                 </Badge>
               )}
               {isCollapsible &&
@@ -498,7 +498,7 @@ const ListField = ({
                       onClick={() => toggleAll(isAllExpanded)}
                     >
                       {isAllExpanded ? <ChevronsDownUp /> : <ChevronsUpDown />}
-                      {isAllExpanded ? "Collapse all" : "Expand all"}
+                      {isAllExpanded ? "모두 접기" : "모두 펼치기"}
                     </Button>
                   );
                 })()}
@@ -546,7 +546,7 @@ const ListField = ({
                   onClick={addItem}
                 >
                   <Plus />
-                  Add an item
+                  항목 추가하기
                 </Button>
               )}
             </div>
@@ -628,7 +628,7 @@ const BlocksField = forwardRef<HTMLDivElement, NestedFieldProps>(
       <div className="space-y-3" ref={ref as React.Ref<HTMLDivElement>}>
         {!selectedBlockDefinition ? (
           <div className="rounded-lg border p-4 space-y-4">
-            <div className="text-sm">Choose content block:</div>
+            <div className="text-sm">콘텐츠 블록 선택:</div>
             <div className="flex flex-wrap gap-2">
               {blocks.map((blockDef: Field) => (
                 <Button
@@ -704,26 +704,26 @@ const BlocksField = forwardRef<HTMLDivElement, NestedFieldProps>(
                       >
                         <AlertDialogHeader>
                           <AlertDialogTitle>
-                            Remove this block?
+                            이 블록을 삭제하시겠습니까?
                           </AlertDialogTitle>
                           <AlertDialogDescription>
-                            This action cannot be undone.
+                            이 작업은 되돌릴 수 없습니다.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>취소</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => {
                               handleRemoveBlock();
                               setIsRemoveBlockDialogOpen(false);
                             }}
                           >
-                            Remove
+                            삭제
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                    <TooltipContent>Remove block</TooltipContent>
+                    <TooltipContent>블록 삭제</TooltipContent>
                   </Tooltip>
                 )}
               </Badge>
@@ -818,7 +818,7 @@ const ObjectField = forwardRef<HTMLDivElement, NestedFieldProps>(
         index={index}
       />
     ) : (
-      `Item ${index !== undefined ? `#${index + 1}` : ""}`
+      `항목 ${index !== undefined ? `${index + 1}` : ""}`
     );
 
     return (
@@ -923,13 +923,13 @@ const SingleField = ({
             {field.required && (
               <Badge variant="secondary" className="text-muted-foreground">
                 <Asterisk className="-ml-1 -mr-0.5" />
-                Required
+                필수
               </Badge>
             )}
             {hasExplicitReadonly(field) && (
               <Badge variant="secondary" className="text-muted-foreground">
                 <Ban className="-ml-0.5" />
-                Readonly
+                읽기 전용
               </Badge>
             )}
           </div>
@@ -979,7 +979,7 @@ const SingleField = ({
                       className="text-muted-foreground"
                     >
                       <Asterisk className="-ml-1 -mr-0.5" />
-                      Required
+                      필수
                     </Badge>
                   )}
                   {hasExplicitReadonly(field) && (
@@ -988,7 +988,7 @@ const SingleField = ({
                       className="text-muted-foreground"
                     >
                       <Ban className="-ml-0.5" />
-                      Readonly
+                      읽기 전용
                     </Badge>
                   )}
                 </div>
@@ -1146,7 +1146,7 @@ const EntryForm = ({
   );
 
   const handleError = () => {
-    toast.error("Please fix the errors before saving.", { duration: 5000 });
+    toast.error("저장하기 전에 오류를 수정해 주세요.", { duration: 5000 });
   };
 
   const handleFormSubmit = useCallback(
@@ -1167,7 +1167,7 @@ const EntryForm = ({
       >
         {filePath && (
           <div className="space-y-2 overflow-hidden">
-            <FormLabel>Filename</FormLabel>
+            <FormLabel>파일 이름</FormLabel>
             {filePath}
           </div>
         )}

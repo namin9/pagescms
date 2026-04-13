@@ -62,7 +62,7 @@ const RepoNav = ({
       key: item.name || "media",
       icon: <FolderOpen className="h-5 w-5 mr-2" />,
       href: `/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/media/${item.name}`,
-      label: item.label || item.name || "Media"
+      label: item.label || item.name || "미디어"
     })) || [];
 
     const canManageRepo = hasGithubIdentity(user);
@@ -72,7 +72,7 @@ const RepoNav = ({
         key: "configuration",
         icon: <Settings className="h-5 w-5 mr-2" />,
         href: `/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/configuration`,
-        label: "Configuration"
+        label: "설정"
       }
       : null;
 
@@ -81,7 +81,7 @@ const RepoNav = ({
         key: "collaborators",
         icon: <Users className="h-5 w-5 mr-2" />,
         href: `/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/collaborators`,
-        label: "Collaborators"
+        label: "팀원"
       }
       : null;
 

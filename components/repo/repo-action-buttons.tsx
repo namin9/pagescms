@@ -85,11 +85,11 @@ const getPrimaryIcon = (isBusy: boolean) => (
 
 const formatRunLine = (run: ActionRunSummary) => {
   const createdAt = run.createdAt ? new Date(run.createdAt) : null;
-  const secondary = run.triggeredByName ? `by ${run.triggeredByName}` : null;
+  const secondary = run.triggeredByName ? `${run.triggeredByName}님에 의해 실행됨` : null;
   if (!createdAt || Number.isNaN(createdAt.getTime())) {
     return (
       <span className="flex min-w-0 flex-col">
-        <span className="truncate">Unknown time</span>
+        <span className="truncate">알 수 없는 시간</span>
         {secondary && (
           <span className="truncate text-xs text-muted-foreground">{secondary}</span>
         )}
@@ -162,7 +162,7 @@ export function RepoActionButtons({
     const response = await fetch(`/api/${owner}/${repo}/${encodeURIComponent(refName)}/actions?${params.toString()}`);
     const payload = await requireApiSuccess<{ data: Record<string, ActionRunSummary[]> }>(
       response,
-      "Failed to fetch action runs",
+      "액션 실행 내역을 불러오지 못했습니다.",
     );
     setRunsByAction(payload.data);
     return payload.data;
@@ -187,7 +187,7 @@ export function RepoActionButtons({
       } catch (error) {
         console.error(error);
         if (refreshErrorToastIdRef.current == null) {
-          refreshErrorToastIdRef.current = toast.error("Couldn’t refresh action status. Retrying…");
+          refreshErrorToastIdRef.current = toast.error("액션 상태를 갱신할 수 없습니다. 다시 시도 중…");
         }
       }
     }, 4000);
@@ -199,7 +199,7 @@ export function RepoActionButtons({
     action: RepoActionConfig,
     inputValues: Record<string, string | number | boolean> = {},
   ) => {
-    const toastId = toast.loading(`Starting "${action.label}"…`);
+    const toastId = toast.loading(`"${action.label}" 시작 중…`);
 
     setDispatching((current) => ({ ...current, [action.name]: true }));
 
@@ -220,7 +220,7 @@ export function RepoActionButtons({
       });
       const payload = await requireApiSuccess<{ data: { id: number } }>(
         response,
-        "Failed to dispatch action",
+        "액션 실행에 실패했습니다.",
       );
       trackActionRun({
         runId: payload.data.id,
@@ -231,7 +231,7 @@ export function RepoActionButtons({
         toastId,
       });
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to dispatch action.", { id: toastId });
+        toast.error(error instanceof Error ? error.message : "액션 실행에 실패했습니다.", { id: toastId });
       } finally {
         setDispatching((current) => ({ ...current, [action.name]: false }));
       }
@@ -379,7 +379,7 @@ export function RepoActionButtons({
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href={`/${owner}/${repo}/${encodeURIComponent(refName)}/actions`}>
-                  View all actions
+                  모든 액션 보기
                 </Link>
               </DropdownMenuItem>
             </>
@@ -406,7 +406,7 @@ export function RepoActionButtons({
           <DialogDescription>
             {typeof dialogAction?.confirm === "object" && dialogAction.confirm.message
               ? dialogAction.confirm.message
-              : "This will trigger a GitHub Action."}
+              : "이 작업은 GitHub Action을 실행합니다."}
           </DialogDescription>
         </DialogHeader>
         {dialogAction?.fields?.length ? (
@@ -428,12 +428,12 @@ export function RepoActionButtons({
             setDialogAction(null);
             setDialogValues({});
           }}>
-            Cancel
+            취소
           </Button>
           <Button onClick={handleDialogSubmit} disabled={isDialogSubmitDisabled}>
             {typeof dialogAction?.confirm === "object" && dialogAction.confirm.button
               ? dialogAction.confirm.button
-              : dialogAction?.label ?? "Run action"}
+              : dialogAction?.label ?? "액션 실행"}
           </Button>
         </DialogFooter>
       </DialogContent>

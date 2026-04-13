@@ -33,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CreateCollectionDialog } from "@/components/repo/create-collection-dialog";
 import {
   Sidebar,
   SidebarContent,
@@ -195,13 +196,13 @@ function RepoSwitcher() {
                 target="_blank"
                 rel="noreferrer"
               >
-                View on GitHub
+                GitHub에서 보기
                 <ArrowUpRight className="size-3 text-muted-foreground ml-auto" />
               </a>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Branches
+              브랜치
             </DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={currentBranch}
@@ -215,13 +216,13 @@ function RepoSwitcher() {
             </DropdownMenuRadioGroup>
             <DropdownMenuSeparator />
             <DialogTrigger asChild>
-              <DropdownMenuItem>Manage branches</DropdownMenuItem>
+              <DropdownMenuItem>브랜치 관리</DropdownMenuItem>
             </DialogTrigger>
             {recentRepos.length > 0 && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  Recently visited
+                  최근 방문
                 </DropdownMenuLabel>
                 {recentRepos.map((visit) => (
                   <DropdownMenuItem
@@ -244,14 +245,14 @@ function RepoSwitcher() {
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/">All projects</Link>
+              <Link href="/">모든 프로젝트</Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Manage branches</DialogTitle>
+          <DialogTitle>브랜치 관리</DialogTitle>
         </DialogHeader>
         <RepoBranches />
       </DialogContent>
@@ -329,7 +330,7 @@ export function RepoSidebar() {
     if (canManageRepo && isCacheEnabled(configObject)) {
       items.push({
         key: "admin-cache",
-        label: "Cache",
+        label: "캐시",
         href: `/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/cache`,
         icon: <Database className="size-4" />,
       });
@@ -338,14 +339,14 @@ export function RepoSidebar() {
     if (canManageRepo) {
       items.push({
         key: "admin-actions",
-        label: "Actions",
+        label: "작업",
         href: `/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/actions`,
         icon: <ListVideo className="size-4" />,
       });
 
       items.push({
         key: "admin-collaborators",
-        label: "Collaborators",
+        label: "팀원",
         href: `/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/collaborators`,
         icon: <Users className="size-4" />,
       });
@@ -354,7 +355,7 @@ export function RepoSidebar() {
     if (canManageRepo && isConfigEnabled(configObject)) {
       items.push({
         key: "admin-configuration",
-        label: "Configuration",
+        label: "설정",
         href: `/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/configuration`,
         icon: <Settings className="size-4" />,
       });
@@ -422,8 +423,8 @@ export function RepoSidebar() {
       };
 
       return [
-        ...collectActiveGroupKeys(contentNavigation, "Content"),
-        ...collectActiveGroupKeys(mediaNavigation, "Media"),
+        ...collectActiveGroupKeys(contentNavigation, "콘텐츠"),
+        ...collectActiveGroupKeys(mediaNavigation, "미디어"),
       ];
     },
     [contentNavigation, hasActiveDescendant, mediaNavigation],
@@ -528,10 +529,16 @@ export function RepoSidebar() {
 
   const renderNavigationGroup = (label: string, nodes: NavigationNode[]) => {
     if (nodes.length === 0) return null;
+    const canManageRepo = hasGithubIdentity(user);
 
     return (
       <SidebarGroup>
-        <SidebarGroupLabel>{label}</SidebarGroupLabel>
+        <SidebarGroupLabel className="flex items-center justify-between pr-2">
+          <span>{label}</span>
+          {label === "콘텐츠" && canManageRepo && (
+            <CreateCollectionDialog />
+          )}
+        </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             {nodes.map((node) => renderNavigationNode(node, `${label}-${node.name}`))}
@@ -570,12 +577,12 @@ export function RepoSidebar() {
   };
 
   const groups = [
-    renderNavigationGroup("Content", contentNavigation),
-    renderNavigationGroup("Media", mediaNavigation),
+    renderNavigationGroup("콘텐츠", contentNavigation),
+    renderNavigationGroup("미디어", mediaNavigation),
     rootActions.length > 0 && config
       ? (
-        <SidebarGroup key="Actions">
-          <SidebarGroupLabel>Actions</SidebarGroupLabel>
+        <SidebarGroup key="작업">
+          <SidebarGroupLabel>작업</SidebarGroupLabel>
           <SidebarGroupContent>
             <RepoActionButtons
               actions={rootActions}
@@ -589,7 +596,7 @@ export function RepoSidebar() {
         </SidebarGroup>
       )
       : null,
-    renderFlatGroup("Admin", adminItems),
+    renderFlatGroup("관리자", adminItems),
   ].filter(Boolean);
 
   return (

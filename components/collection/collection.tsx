@@ -123,7 +123,7 @@ const CollectionHeaderActions = memo(function CollectionHeaderActions({
           className="pl-9"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search entries..."
+          placeholder="항목 검색..."
         />
       </div>
       {showFolderCreate && (
@@ -147,7 +147,7 @@ const CollectionHeaderActions = memo(function CollectionHeaderActions({
               </FolderCreate>
             </div>
           </TooltipTrigger>
-          <TooltipContent>Create folder</TooltipContent>
+          <TooltipContent>폴더 생성</TooltipContent>
         </Tooltip>
       )}
       {showAddEntry && (
@@ -156,7 +156,7 @@ const CollectionHeaderActions = memo(function CollectionHeaderActions({
             className={cn(buttonVariants(), "hidden sm:flex")}
             href={addEntryHref}
           >
-            Add an entry
+            항목 추가
           </Link>
           <Link
             className={cn(buttonVariants({ size: "icon" }), "sm:hidden shrink-0")}
@@ -217,7 +217,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
       pathAndFieldArray.push({
         path: "name",
         field: {
-          label: "Name",
+          label: "이름",
           name: "name",
           type: "string",
         },
@@ -235,7 +235,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
       pathAndFieldArray.push({
         path: "date",
         field: {
-          label: "Date",
+          label: "날짜",
           name: "date",
           type: "date",
         },
@@ -277,7 +277,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
   const fetchCollectionByUrl = useCallback(
     async (apiUrl: string): Promise<Record<string, any>[]> => {
       const response = await fetch(apiUrl);
-      const result = await requireApiSuccess<any>(response, "Fetch failed");
+      const result = await requireApiSuccess<any>(response, "불러오기 실패");
 
       if (result.data.errors?.length) {
         result.data.errors.forEach((e: any) => toast.error(e));
@@ -327,7 +327,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
     setError(
       swrCollectionError instanceof Error
         ? swrCollectionError.message
-        : "Fetch failed",
+        : "불러오기 실패",
     );
   }, [swrCollectionError]);
 
@@ -349,7 +349,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
           setError(err.message);
         } else {
           toast.error(
-            `Could not load items inside ${getFileName(fetchPath)}: ${err.message}`,
+            `${getFileName(fetchPath)} 내부 항목을 불러오지 못했습니다: ${err.message}`,
           );
         }
         return undefined;
@@ -539,7 +539,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
 
     tableColumns.push({
       accessorKey: "actions",
-      header: "Actions",
+      header: "작업",
       cell: ({ row }: { row: any }) => (
         <div className="flex gap-1 justify-end">
           {row.original.type === "file" && (
@@ -550,7 +550,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
                 )}
                 href={`/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/collection/${name}/edit/${encodeURIComponent(row.original.path)}`}
               >
-                Edit
+                수정
               </Link>
               <FileOptions
                 path={row.original.path}
@@ -590,23 +590,22 @@ export function Collection({ name, path }: { name: string; path?: string }) {
                       </Button>
                     </AlertDialogTrigger>
                   </TooltipTrigger>
-                  <TooltipContent>Add children entry</TooltipContent>
+                  <TooltipContent>하위 항목 추가</TooltipContent>
                 </Tooltip>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Rename this file first?</AlertDialogTitle>
+                    <AlertDialogTitle>파일 이름을 먼저 변경할까요?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Before adding children to this file, you must rename it
-                      from &quot;{row.original.path}&quot; to &quot;
+                      하위 항목을 추가하기 전에, 이 파일의 이름을 &quot;{row.original.path}&quot;에서 &quot;
                       {row.original.path.replace(
                         `.${schema.extension}`,
                         `/${schema.view?.node?.filename}`,
                       )}
-                      &quot;.
+                      &quot;로 변경해야 합니다.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>취소</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() =>
                         handleConfirmRenameNode(
@@ -618,7 +617,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
                         )
                       }
                     >
-                      Rename
+                      이름 변경
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -643,7 +642,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
                     <Plus className="size-4" />
                   </Link>
                 </TooltipTrigger>
-                <TooltipContent>Add children entry</TooltipContent>
+                <TooltipContent>하위 항목 추가</TooltipContent>
               </Tooltip>
             ))}
         </div>
@@ -770,7 +769,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
                 <div className="flex gap-1 justify-end">
                   <ButtonGroup>
                     <Button variant="outline" size="sm" disabled>
-                      Edit
+                      수정
                     </Button>
                     <Button variant="outline" size="icon-sm" disabled>
                       <EllipsisVertical className="size-4" />
@@ -865,7 +864,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
                 <DropdownMenu>
                   <DropdownMenuTrigger className="flex items-center">
                     <BreadcrumbEllipsis className="size-4" />
-                    <span className="sr-only">Show hidden segments</span>
+                    <span className="sr-only">숨겨진 경로 보기</span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     {middleEntries.map((entry) => (
@@ -988,12 +987,12 @@ export function Collection({ name, path }: { name: string; path?: string }) {
         <EmptyHeader>
           <EmptyTitle>
             {error === "Not found"
-              ? "Folder not found"
-              : "Something went wrong"}
+              ? "폴더를 찾을 수 없습니다"
+              : "문제가 발생했습니다"}
           </EmptyTitle>
           <EmptyDescription>
             {error === "Not found"
-              ? `The collection folder "${schema.path}" does not exist yet.`
+              ? `컬렉션 폴더 "${schema.path}"이(가) 아직 존재하지 않습니다.`
               : error}
           </EmptyDescription>
         </EmptyHeader>
@@ -1001,7 +1000,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
           {error === "Not found" ? (
             canCreate ? (
               <EmptyCreate type="content" name={schema.name}>
-                Create folder
+                폴더 생성하기
               </EmptyCreate>
             ) : null
           ) : (
@@ -1009,7 +1008,7 @@ export function Collection({ name, path }: { name: string; path?: string }) {
               className={buttonVariants({ variant: "default" })}
               href={`/${config.owner}/${config.repo}/${encodeURIComponent(config.branch)}/settings`}
             >
-              Go to settings
+              설정으로 이동
             </Link>
           )}
         </EmptyContent>
