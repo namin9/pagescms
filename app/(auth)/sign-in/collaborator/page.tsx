@@ -166,7 +166,7 @@ export default async function Page({
     return (
       <SignInFromInvite
         githubUsername={
-          isGithubUser ? (user?.githubUsername ?? undefined) : undefined
+          isGithubUser ? ((user as any)?.githubUsername ?? undefined) : undefined
         }
         signedInEmail={user?.email ?? undefined}
         redirectTo={redirectTo}
@@ -207,7 +207,7 @@ export default async function Page({
   return (
     <SignInFromInvite
       githubUsername={
-        isGithubUser ? (user?.githubUsername ?? undefined) : undefined
+        isGithubUser ? ((user as any)?.githubUsername ?? undefined) : undefined
       }
       signedInEmail={user?.email ?? undefined}
       redirectTo={getSafeRedirect(resolvedSearchParams.redirect)}
