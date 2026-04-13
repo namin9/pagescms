@@ -1,14 +1,22 @@
 import { db } from '../index';
-import { sql } from 'drizzle-orm';
+import { cacheFileTable, cachePermissionTable, configTable, cacheFileMetaTable } from '../schema';
 
-console.log('Clearing cache tables...');
+async function clearCache() {
+  console.log('Clearing cache tables (SQLite/D1)...');
 
-db.execute(sql`TRUNCATE TABLE cache_file, cache_permission, config, cache_file_meta`)
-  .then(() => {
+  try {
+    // SQLite에서는 TRUNCATE 대신 DELETE FROM을 사용합니다.
+    await db.delete(cacheFileTable);
+    await db.delete(cachePermissionTable);
+    await db.delete(configTable);
+    await db.delete(cacheFileMetaTable);
+
     console.log('✅ Cache tables cleared successfully');
     process.exit(0);
-  })
-  .catch((error) => {
+  } catch (error) {
     console.error('❌ Error clearing cache:', error);
     process.exit(1);
-  });
+  }
+}
+
+clearCache();
