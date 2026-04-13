@@ -18,7 +18,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 
-export const runtime = "experimental-edge";
+export const runtime = "edge";
 
 const isInviteEmailMatch = (signedInEmail?: string, inviteEmail?: string) => {
   if (!signedInEmail || !inviteEmail) return false;

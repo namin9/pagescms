@@ -6,7 +6,7 @@ import { getBaseUrl } from "@/lib/base-url";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
-export const runtime = "experimental-edge";
+export const runtime = "edge";
 
 const inter = Inter({
   subsets: ["latin"],
