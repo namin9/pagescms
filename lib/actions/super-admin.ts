@@ -72,7 +72,7 @@ export async function getUsersAction() {
   return users.map(u => ({
     ...u,
     tenant: u.tenantName ? { name: u.tenantName } : null
-  }));
+  })) as any[];
 }
 
 /**

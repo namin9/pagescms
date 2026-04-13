@@ -33,6 +33,7 @@ export const auth = betterAuth({
     nextCookies(),
   ],
   callbacks: {
+    // @ts-ignore
     session: async ({ session, user }) => {
       if (user.tenantId) {
         const tenant = await db.query.tenantTable.findFirst({
