@@ -256,7 +256,7 @@ export default async function Page({
                 </TableHeader>
                 <TableBody>
                   {users.length > 0 ? (
-                    users.map((user) => (
+                    users.map((user: any) => (
                       <TableRow key={user.id}>
                         <TableCell className="w-10 min-w-10">
                           <Avatar size="sm">
