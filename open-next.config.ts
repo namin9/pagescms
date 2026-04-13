@@ -6,6 +6,7 @@ export default {
       proxyExternalRequest: "fetch",
     },
   },
+  edgeExternals: ["node:crypto"],
   middleware: {
     external: true,
     override: {
