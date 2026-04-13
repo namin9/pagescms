@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { createOctokitInstance } from "@/lib/utils/octokit";
+import { getMasterOctokit } from "@/lib/utils/octokit";
 import { isContentOperationAllowed } from "@/lib/operations";
 import { writeFns } from "@/fields/registry";
 import { configVersion, parseConfig, normalizeConfig } from "@/lib/config";
@@ -8,21 +8,11 @@ import { deepMap, generateZodSchema, getSchemaByName, sanitizeObject } from "@/l
 import { getConfig, updateConfig } from "@/lib/config-store";
 import { getFileExtension, getFileName, normalizePath, serializedTypes, getParentPath } from "@/lib/utils/file";
 import { assertGithubIdentity } from "@/lib/authz-shared";
-import { getToken } from "@/lib/token";
 import { updateFileCache } from "@/lib/github-cache-file";
 import { createHttpError, toErrorResponse } from "@/lib/api-error";
 import mergeWith from "lodash.mergewith";
 import { buildCommitTokens, resolveCommitIdentity, resolveCommitMessage } from "@/lib/commit-message";
 import { requireApiUserSession } from "@/lib/session-server";
-
-/**
- * Create, update and delete individual files in a GitHub repository.
- * 
- * POST /api/[owner]/[repo]/[branch]/files/[path]
- * DELETE /api/[owner]/[repo]/[branch]/files/[path]
- * 
- * Requires authentication.
- */
 
 export async function POST(
   request: Request,
@@ -32,15 +22,20 @@ export async function POST(
     const params = await context.params;
     const sessionResult = await requireApiUserSession();
     if ("response" in sessionResult) return sessionResult.response;
-    const user = sessionResult.user;
+    const user = sessionResult.user as any;
+    const tenant = user.tenant;
 
-    const { token } = await getToken(user, params.owner, params.repo, true);
-    if (!token) throw new Error("Token not found");
+    if (!tenant || tenant.owner !== params.owner || tenant.repo !== params.repo) {
+      throw createHttpError("이 저장소에 대한 접근 권한이 없습니다.", 403);
+    }
+
+    const masterToken = process.env.GITHUB_MASTER_TOKEN;
+    if (!masterToken) throw new Error("Server configuration error: GITHUB_MASTER_TOKEN not set.");
 
     const normalizedPath = normalizePath(params.path);
 
     const config = await getConfig(params.owner, params.repo, params.branch, {
-      getToken: async () => token,
+      getToken: async () => masterToken,
     });
     if (!config && normalizedPath !== ".pages.yml") throw new Error(`Configuration not found for ${params.owner}/${params.repo}/${params.branch}.`);
 
@@ -71,7 +66,6 @@ export async function POST(
         }
 
         if (getFileName(normalizedPath) === ".gitkeep") {
-          // Folder creation
           contentBase64 = "";
         } else {
           if (getFileExtension(normalizedPath) !== (schema.extension ?? "")) throw new Error(`Invalid extension "${getFileExtension(normalizedPath)}" for ${data.type} "${data.name}".`);
@@ -80,7 +74,6 @@ export async function POST(
             let contentFields;
             let contentObject;
 
-            // Wrapping things in listWrapper to deal with lists at the root
             if (schema.list) {
               contentObject = { listWrapper: data.content };
               contentFields = [{
@@ -94,7 +87,6 @@ export async function POST(
               contentFields = schema.fields;
             }
             
-            // Use mapBlocks to convert config blocks array to a map
             const zodSchema = generateZodSchema(contentFields);
             const zodValidation = zodSchema.safeParse(contentObject);
             
@@ -123,7 +115,7 @@ export async function POST(
             let finalContentObject = JSON.parse(JSON.stringify(unwrappedContentObject));
 
             if (config?.object?.settings?.content?.merge && data.sha && !schema.list) {
-              const octokit = createOctokitInstance(token);
+              const octokit = getMasterOctokit();
               const response = await octokit.rest.repos.getContent({
                 owner: params.owner,
                 repo: params.repo,
@@ -171,7 +163,6 @@ export async function POST(
         if (!normalizedPath.startsWith(schema.input)) throw new Error(`Invalid path "${params.path}" for media "${data.name}".`);
         
         if (getFileName(normalizedPath) === ".gitkeep") {
-          // Folder creation
           contentBase64 = "";
         } else {
           if (
@@ -183,7 +174,6 @@ export async function POST(
         }
         break;
       case "settings":
-        assertGithubIdentity(user, "Only GitHub users can manage settings.");
         if (normalizedPath !== ".pages.yml") throw new Error(`Invalid path "${params.path}" for settings.`);
         if (!data.sha && !isContentOperationAllowed("create", { scope: "settings" })) {
           throw createHttpError(`Creating the settings file isn't allowed.`, 403);
@@ -195,22 +185,12 @@ export async function POST(
         throw new Error(`Invalid type "${data.type}".`);
     }
 
-    const commitIdentity = resolveCommitIdentity({
-      configObject: config?.object,
-      identityOverride: schemaCommitIdentity,
-    });
-    const committer = (
-      commitIdentity === "user" &&
-      user.email
-    )
-      ? {
-          name: user.name?.trim() || user.email,
-          email: user.email,
-        }
-      : undefined;
+    const committer = {
+      name: user.name?.trim() || user.email,
+      email: user.email,
+    };
     
     const response = await githubSaveFile(
-      token,
       params.owner,
       params.repo,
       params.branch,
@@ -246,7 +226,6 @@ export async function POST(
     }
     
     if (response?.data.content && response?.data.commit) {
-      // If the file is successfully saved, update the cache
       await updateFileCache(
         data.type === 'content' ? 'collection' : 'media',
         params.owner,
@@ -289,9 +268,7 @@ export async function POST(
   }
 };
 
-// Helper function to save a file to GitHub (with retry logic for new files)
 const githubSaveFile = async (
-  token: string,
   owner: string,
   repo: string,
   branch: string,
@@ -307,10 +284,9 @@ const githubSaveFile = async (
     committer?: { name: string; email: string };
   },
 ) => {
-  // We disable retries for 409 errors as it means the file has changed (conflict on SHA)
-  const octokit = createOctokitInstance(token, { retry: { doNotRetry: [409] } });
+  const octokit = getMasterOctokit();
   
-  const message = resolveCommitMessage({
+  const originalMessage = resolveCommitMessage({
     configObject: options?.configObject,
     templatesOverride: options?.templatesOverride,
     action: sha ? "update" : "create",
@@ -327,8 +303,9 @@ const githubSaveFile = async (
     }),
   });
 
+  const message = `CMS: [${options?.user}] ${originalMessage}`;
+
   try {
-    // First attempt: try with original path
     const response = await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
@@ -352,7 +329,7 @@ const githubSaveFile = async (
     if (error.status === 409) {
       if (githubMessage?.includes("Repository rule violations found")) {
         throw createHttpError(
-          "This repository requires changes through a pull request. Save to a different branch or fork, or ask a maintainer to relax the repository rule for direct edits.",
+          "This repository requires changes through a pull request.",
           409,
         );
       }
@@ -365,13 +342,11 @@ const githubSaveFile = async (
       }
     }
 
-    // Only handle 422 errors for new files (no sha)
     if (error.status === 422 && !sha) {
       if (options?.onConflict === "error") {
         throw createHttpError(`File \"${path}\" already exists.`, 409);
       }
 
-      // Get directory contents to find next available name
       const parentDir = getParentPath(path);
       const { data } = await octokit.rest.repos.getContent({
         owner,
@@ -388,40 +363,19 @@ const githubSaveFile = async (
       const lastDotIndex = basename.lastIndexOf(".");
       const filename = lastDotIndex > 0 ? basename.slice(0, lastDotIndex) : basename;
       const extension = lastDotIndex > 0 ? basename.slice(lastDotIndex + 1) : "";
-      const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const escapedFilename = escapeRegExp(filename);
-      const escapedExtension = escapeRegExp(extension);
-      const pattern = extension
-        ? new RegExp(`^${escapedFilename}-(\\d+)\\.${escapedExtension}$`)
-        : new RegExp(`^${escapedFilename}-(\\d+)$`);
-      const maxNumber = Math.max(0, ...data
-        .map(file => {
-          const match = file.name.match(pattern);
-          return match ? parseInt(match[1], 10) : 0;
-        }));
+      
+      const maxNumber = Math.max(0, ...data.map(file => {
+        const match = file.name.match(new RegExp(`^${filename}-(\\d+)${extension ? "\\." + extension : ""}$`));
+        return match ? parseInt(match[1], 10) : 0;
+      }));
 
-      // Try up to 3 times with incrementing numbers
       for (let i = 1; i <= 3; i++) {
         const candidateFilename = extension
           ? `${filename}-${maxNumber + i}.${extension}`
           : `${filename}-${maxNumber + i}`;
         const newPath = `${parentDir ? parentDir + '/' : ''}${candidateFilename}`;
-        const fallbackMessage = resolveCommitMessage({
-          configObject: options?.configObject,
-          templatesOverride: options?.templatesOverride,
-          action: "create",
-          tokens: buildCommitTokens({
-            action: "create",
-            owner,
-            repo,
-            branch,
-            path: newPath,
-            contentName: options?.contentName,
-            user: options?.user,
-            userName: options?.committer?.name,
-            userEmail: options?.committer?.email,
-          }),
-        });
+        const fallbackMessage = `CMS: [${options?.user}] ${candidateFilename} 생성`;
+
         try {
           const response = await octokit.rest.repos.createOrUpdateFileContents({
             owner,
@@ -438,7 +392,6 @@ const githubSaveFile = async (
           }
         } catch (error: any) {
           if (i === 3 || error.status !== 422) throw error;
-          // Continue to next attempt if 422 (file already exists)
         }
       }
     }
@@ -454,28 +407,28 @@ export async function DELETE(
     const params = await context.params;
     const sessionResult = await requireApiUserSession();
     if ("response" in sessionResult) return sessionResult.response;
-    const user = sessionResult.user;
+    const user = sessionResult.user as any;
+    const tenant = user.tenant;
 
-    const { token } = await getToken(user, params.owner, params.repo, true);
-    if (!token) throw new Error("Token not found");
-
-    if (!isContentOperationAllowed("delete", { scope: "settings" }) && params.path === ".pages.yml") {
-      throw createHttpError(`Deleting the settings file isn't allowed.`, 403);
+    if (!tenant || tenant.owner !== params.owner || tenant.repo !== params.repo) {
+      throw createHttpError("이 저장소에 대한 접근 권한이 없습니다.", 403);
     }
+
+    const masterToken = process.env.GITHUB_MASTER_TOKEN;
+    if (!masterToken) throw new Error("Server configuration error: GITHUB_MASTER_TOKEN not set.");
 
     const searchParams = request.nextUrl.searchParams;
     const sha = searchParams.get("sha");
     const type = searchParams.get("type");
     const name = searchParams.get("name");
 
-    if (!type || !["content", "media"].includes(type)) throw new Error(`"type" is required and must be set to "content" or "media".`);
-    if (!name && type === "content") throw new Error(`"name" is required.`);
+    if (!type || !["content", "media"].includes(type)) throw new Error(`"type" is required.`);
     if (!sha) throw new Error(`"sha" is required.`);
 
     const config = await getConfig(params.owner, params.repo, params.branch, {
-      getToken: async () => token,
+      getToken: async () => masterToken,
     });
-    if (!config) throw new Error(`Configuration not found for ${params.owner}/${params.repo}/${params.branch}.`);
+    if (!config) throw new Error(`Configuration not found.`);
 
     const normalizedPath = normalizePath(params.path);
     let schema;
@@ -484,82 +437,54 @@ export async function DELETE(
 
     switch (type) {
       case "content":
-        if (!name) throw new Error(`"name" is required for content.`);
-
+        if (!name) throw new Error(`"name" is required.`);
         schema = getSchemaByName(config.object, name);
-        if (!schema) throw new Error(`Content schema not found for ${name}.`);
-        if (!isContentOperationAllowed("delete", { schema })) {
-          throw createHttpError(`Deleting entries isn't allowed for "${name}".`, 403);
-        }
+        if (!schema) throw new Error(`Content schema not found.`);
         schemaCommitTemplates = schema?.commit?.templates;
         schemaCommitIdentity = schema?.commit?.identity;
-        
-        if (!normalizedPath.startsWith(schema.path)) throw new Error(`Invalid path "${params.path}" for ${type} "${name}".`);
-        
-        if (schema.subfolders === false && getParentPath(normalizedPath) !== schema.path) {
-          throw new Error(`Subfolders are not allowed for collection "${name}".`);
-        }
-        
-        if (getFileExtension(normalizedPath) !== (schema.extension ?? "")) throw new Error(`Invalid extension "${getFileExtension(normalizedPath)}" for ${type} "${name}".`);
         break;
       case "media":
-        if (!name) throw new Error(`"name" is required for media.`);
-
+        if (!name) throw new Error(`"name" is required.`);
         schema = getSchemaByName(config.object, name, "media");
-        if (!schema) throw new Error(`Media schema not found for ${name}.`);
+        if (!schema) throw new Error(`Media schema not found.`);
         schemaCommitTemplates = schema?.commit?.templates;
         schemaCommitIdentity = schema?.commit?.identity;
-
-        if (!normalizedPath.startsWith(schema.input)) throw new Error(`Invalid path "${params.path}" for media "${name}".`);
-
-        if (
-          schema.extensions?.length > 0 &&
-          !schema.extensions.includes(getFileExtension(normalizedPath))
-        ) throw new Error(`Invalid extension "${getFileExtension(normalizedPath)}" for media.`);
         break;
     }
 
-    const commitIdentity = resolveCommitIdentity({
-      configObject: config.object,
-      identityOverride: schemaCommitIdentity,
-    });
-    const committer = (
-      commitIdentity === "user" &&
-      user.email
-    )
-      ? {
-          name: user.name?.trim() || user.email,
-          email: user.email,
-        }
-      : undefined;
+    const committer = {
+      name: user.name?.trim() || user.email,
+      email: user.email,
+    };
     
-    const octokit = createOctokitInstance(token);
+    const octokit = getMasterOctokit();
+    const originalMessage = resolveCommitMessage({
+      configObject: config.object,
+      templatesOverride: schemaCommitTemplates,
+      action: "delete",
+      tokens: buildCommitTokens({
+        action: "delete",
+        owner: params.owner,
+        repo: params.repo,
+        branch: params.branch,
+        path: normalizedPath,
+        contentName: name || undefined,
+        user: user.email || user.name || String(user.id || ""),
+        userName: committer?.name,
+        userEmail: committer?.email,
+      }),
+    });
+
     const response = await octokit.rest.repos.deleteFile({
       owner: params.owner,
       repo: params.repo,
       branch: params.branch,
       path: normalizedPath,
       sha: sha,
-      message: resolveCommitMessage({
-        configObject: config.object,
-        templatesOverride: schemaCommitTemplates,
-        action: "delete",
-        tokens: buildCommitTokens({
-          action: "delete",
-          owner: params.owner,
-          repo: params.repo,
-          branch: params.branch,
-          path: normalizedPath,
-          contentName: name || undefined,
-          user: user.email || user.name || String(user.id || ""),
-          userName: committer?.name,
-          userEmail: committer?.email,
-        }),
-      }),
+      message: `CMS: [${user.email}] ${originalMessage}`,
       committer,
     });
 
-    // Update cache after successful deletion
     await updateFileCache(
       type === "content" ? "collection" : "media",
       params.owner,
@@ -571,23 +496,13 @@ export async function DELETE(
         commit: response?.data.commit?.sha
           ? {
               sha: response.data.commit.sha,
-              timestamp: new Date(
-                response.data.commit.committer?.date ?? new Date().toISOString(),
-              ).getTime(),
+              timestamp: new Date(response.data.commit.committer?.date ?? new Date().toISOString()).getTime(),
             }
           : undefined,
       }
     );
 
-    return Response.json({
-      status: "success",
-      message: `File "${normalizedPath}" deleted successfully.`,
-      data: {
-        sha: response?.data.commit.sha,
-        name: response?.data.content?.name,
-        path: response?.data.content?.path,
-      }
-    });
+    return Response.json({ status: "success", data: { sha: response?.data.commit.sha, path: normalizedPath } });
   } catch (error: any) {
     console.error(error);
     return toErrorResponse(error);

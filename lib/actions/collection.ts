@@ -1,14 +1,11 @@
 "use server";
 
 import { getSession } from "@/lib/session-server";
-import { Octokit } from "@octokit/rest";
+import { getMasterOctokit } from "@/lib/utils/octokit";
 import yaml from "js-yaml";
 import { revalidatePath } from "next/cache";
 
 type CreateCollectionParams = {
-  owner: string;
-  repo: string;
-  branch: string;
   collection: {
     type: string;
     name: string;
@@ -19,16 +16,18 @@ type CreateCollectionParams = {
 };
 
 export async function createCollectionAction(params: CreateCollectionParams) {
-  const { owner, repo, branch, collection } = params;
+  const { collection } = params;
   const session = await getSession();
 
-  if (!session?.githubAccessToken) {
-    throw new Error("GitHub 인증이 필요합니다.");
+  // 1. 세션 및 테넌트 정보 확인 (보안 강화)
+  if (!session?.user?.tenant) {
+    throw new Error("로그인이 필요하거나 테넌트 정보가 없습니다.");
   }
 
-  const octokit = new Octokit({ auth: session.githubAccessToken });
+  const { owner, repo, branch } = session.user.tenant;
+  const octokit = getMasterOctokit();
 
-  // 1. 설정 파일 (.pagescms.yml 또는 pages.yml) 찾기
+  // 2. 설정 파일 (.pagescms.yml 또는 pages.yml) 찾기
   let configPath = ".pagescms.yml";
   let sha: string | undefined;
   let currentContent = "";
@@ -46,7 +45,6 @@ export async function createCollectionAction(params: CreateCollectionParams) {
       sha = data.sha;
     }
   } catch (error: any) {
-    // .pagescms.yml이 없으면 pages.yml 시도
     if (error.status === 404) {
       try {
         configPath = "pages.yml";
@@ -61,7 +59,6 @@ export async function createCollectionAction(params: CreateCollectionParams) {
           sha = data.sha;
         }
       } catch (innerError: any) {
-        // 둘 다 없으면 새로 생성 (.pagescms.yml)
         configPath = ".pagescms.yml";
       }
     } else {
@@ -69,7 +66,7 @@ export async function createCollectionAction(params: CreateCollectionParams) {
     }
   }
 
-  // 2. YAML 파싱 및 설정 병합
+  // 3. YAML 파싱 및 설정 병합
   let config: any = { content: [] };
   if (currentContent) {
     try {
@@ -81,32 +78,32 @@ export async function createCollectionAction(params: CreateCollectionParams) {
 
   if (!config.content) config.content = [];
   
-  // 중복된 이름 확인
   if (config.content.some((c: any) => c.name === collection.name)) {
     throw new Error(`이미 '${collection.name}'이라는 이름의 게시판이 존재합니다.`);
   }
 
   config.content.push(collection);
 
-  // 3. YAML 문자열로 변환 (깔끔한 인덴테이션 적용)
   const updatedYaml = yaml.dump(config, {
     indent: 2,
     lineWidth: -1,
     noRefs: true,
   });
 
-  // 4. GitHub에 커밋
+  // 4. GitHub 프록시 커밋 (Master Token 사용)
+  const userIdentifier = session.user.name || session.user.email;
+  const commitMessage = `CMS: [${userIdentifier}] 님이 새 게시판 [${collection.label}] 설정 추가`;
+
   await octokit.repos.createOrUpdateFileContents({
     owner,
     repo,
     path: configPath,
-    message: `CMS: 새 게시판 [${collection.label}] 설정 추가`,
+    message: commitMessage,
     content: Buffer.from(updatedYaml).toString("base64"),
     branch,
     sha,
   });
 
-  // 5. 캐시 갱신 (선택 사항)
   revalidatePath(`/${owner}/${repo}/${branch}`);
 
   return { success: true, path: configPath };

@@ -1,9 +1,6 @@
 import { createHttpError } from "@/lib/api-error";
 import { getConfig } from "@/lib/config-store";
-import { getGithubId } from "@/lib/github-account";
-import { checkRepoAccess } from "@/lib/github-cache-permissions";
 import { requireApiUserSession } from "@/lib/session-server";
-import { getToken } from "@/lib/token";
 import type { Config } from "@/types/config";
 import type { User } from "@/types/user";
 
@@ -25,22 +22,30 @@ const getRepoReadContext = async ({ owner, repo, branch }: RepoRef): Promise<Rep
     throw createHttpError("Not signed in.", sessionResult.response?.status ?? 401);
   }
 
-  const user = sessionResult.user as User;
-  const { token, source } = await getToken(user, owner, repo);
-  if (!token) throw createHttpError("Token not found", 401);
+  const user = sessionResult.user as any; // Better-Auth session user with tenant info
+  const tenant = user.tenant;
 
-  const githubId = await getGithubId(user.id);
-  if (githubId && source === "user") {
-    const hasAccess = await checkRepoAccess(token, owner, repo, githubId);
-    if (!hasAccess) throw createHttpError(`No access to repository ${owner}/${repo}.`, 403);
+  if (!tenant) {
+    throw createHttpError("No tenant assigned to this user.", 403);
+  }
+
+  // 보안 강화: 세션의 테넌트 정보와 URL 파라미터가 일치하는지 확인
+  if (tenant.owner !== owner || tenant.repo !== repo) {
+    throw createHttpError("Access denied: Tenant mismatch.", 403);
+  }
+
+  const masterToken = process.env.GITHUB_MASTER_TOKEN;
+  if (!masterToken) {
+    throw createHttpError("Server configuration error: GITHUB_MASTER_TOKEN not set.", 500);
   }
 
   const config = await getConfig(owner, repo, branch, {
-    getToken: async () => token,
+    getToken: async () => masterToken,
   });
+  
   if (!config) throw createHttpError(`Configuration not found for ${owner}/${repo}/${branch}.`, 404);
 
-  return { user, token, config };
+  return { user, token: masterToken, config };
 };
 
 export { getRepoReadContext };

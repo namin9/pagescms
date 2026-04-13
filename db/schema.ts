@@ -191,6 +191,25 @@ const actionRunTable = pgTable("action_run", {
 }));
 
 export {
+  tenantTable,
+  userTable,
+  sessionTable,
+  accountTable,
+  verificationTable,
+  githubInstallationTokenTable,
+  collaboratorTable,
+  configTable,
+  cacheFileTable,
+  cacheFileMetaTable,
+  cachePermissionTable,
+  actionRunTable
+};
+.on(table.owner, table.repo, table.status),
+  idx_action_run_context: index("idx_action_run_context").on(table.owner, table.repo, table.contextType, table.contextName, table.contextPath),
+  idx_action_run_workflowRunId: uniqueIndex("idx_action_run_workflowRunId").on(table.workflowRunId),
+}));
+
+export {
   userTable,
   sessionTable,
   accountTable,
