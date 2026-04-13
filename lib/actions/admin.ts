@@ -1,42 +1,24 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { sessionTable } from "@/db/schema";
-import { requireAdminSession } from "@/lib/admin";
+import { cacheFileTable, cachePermissionTable, configTable, cacheFileMetaTable } from "@/db/schema";
+import { requireAdminSession } from "@/lib/session-server";
+import { revalidatePath } from "next/cache";
 
-const resetGlobalCache = async () => {
+export async function clearCacheAction() {
   await requireAdminSession();
 
-  await db.execute(
-    sql`TRUNCATE TABLE cache_file, cache_permission, config, cache_file_meta`,
-  );
+  try {
+    // SQLite/D1에서는 TRUNCATE 대신 DELETE FROM을 사용합니다.
+    await db.delete(cacheFileTable);
+    await db.delete(cachePermissionTable);
+    await db.delete(configTable);
+    await db.delete(cacheFileMetaTable);
 
-  revalidatePath("/admin");
-
-  return { success: true };
-};
-
-const logoutUserSessions = async (userId: string) => {
-  const { user } = await requireAdminSession();
-
-  await db.delete(sessionTable).where(eq(sessionTable.userId, userId));
-  revalidatePath("/admin");
-
-  if (user.id === userId) {
-    redirect("/sign-in");
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to clear cache:", error);
+    throw new Error("캐시를 비우는 도중 오류가 발생했습니다.");
   }
-
-  return { success: true };
-};
-
-const logoutAllUsers = async () => {
-  await requireAdminSession();
-
-  await db.delete(sessionTable);
-  redirect("/sign-in");
-};
-
-export { logoutAllUsers, logoutUserSessions, resetGlobalCache };
+}

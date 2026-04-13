@@ -140,21 +140,17 @@ const withFolderCacheLock = async <T>(
   scope: CacheScope,
   callback: (tx: any) => Promise<T>,
 ): Promise<{ acquired: boolean; value?: T }> => {
-  const primary = `${owner.toLowerCase()}::${repo.toLowerCase()}::${branch}`;
-  const secondary = `${scope.context}::${scope.path}`;
-
-  return db.transaction(async (tx) => {
-    const result = await tx.execute(sql`
-      select pg_try_advisory_xact_lock(hashtext(${primary}), hashtext(${secondary})) as locked
-    `);
-    const locked = Boolean((result as any)?.[0]?.locked);
-    if (!locked) return { acquired: false };
-
-    return {
-      acquired: true,
-      value: await callback(tx),
-    };
-  });
+  // SQLite/D1에서는 PostgreSQL의 advisory lock이 지원되지 않습니다.
+  // D1은 기본적으로 순차적 처리를 지향하므로 락 없이 트랜잭션을 실행합니다.
+  try {
+    const value = await db.transaction(async (tx) => {
+      return await callback(tx);
+    });
+    return { acquired: true, value };
+  } catch (error) {
+    console.error("Transaction failed:", error);
+    return { acquired: false };
+  }
 };
 
 const markFolderScopeError = async (
