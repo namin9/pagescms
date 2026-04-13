@@ -64,11 +64,11 @@ const findWorkflowRun = async (
     });
 
     const run = response.data.workflow_runs
-      .filter((item) => (
+      .filter((item: any) => (
         Date.parse(item.created_at) >= startedAtMs - 30_000
         && !claimedRunIdsSet.has(item.id)
       ))
-      .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at))[0];
+      .sort((left: any, right: any) => Date.parse(right.created_at) - Date.parse(left.created_at))[0];
 
     if (run) return run;
     await sleep(1500);
@@ -90,8 +90,8 @@ const getClaimedWorkflowRunIds = async (row: typeof actionRunTable.$inferSelect)
   ));
 
   return rows
-    .map((claimedRow) => claimedRow.workflowRunId)
-    .filter((value): value is number => typeof value === "number");
+    .map((claimedRow: any) => claimedRow.workflowRunId)
+    .filter((value: any): value is number => typeof value === "number");
 };
 
 const resolveWorkflowSha = async (

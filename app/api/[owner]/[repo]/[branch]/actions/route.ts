@@ -69,11 +69,11 @@ const findWorkflowRun = async (
     });
 
     const run = response.data.workflow_runs
-      .filter((item) => (
+      .filter((item: any) => (
         Date.parse(item.created_at) >= startedAtMs - 30_000
         && !claimedRunIdsSet.has(item.id)
       ))
-      .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at))[0];
+      .sort((left: any, right: any) => Date.parse(right.created_at) - Date.parse(left.created_at))[0];
 
     if (run) return run;
     await sleep(1500);
@@ -101,8 +101,8 @@ const getClaimedWorkflowRunIds = async (
   ));
 
   return rows
-    .map((row) => row.workflowRunId)
-    .filter((value): value is number => typeof value === "number");
+    .map((row: any) => row.workflowRunId)
+    .filter((value: any): value is number => typeof value === "number");
 };
 
 const buildContextWhere = ({
@@ -210,7 +210,7 @@ export async function GET(
     const url = new URL(request.url);
     const actionNames = (url.searchParams.get("actionNames") || "")
       .split(",")
-      .map((item) => item.trim())
+      .map((item: string) => item.trim())
       .filter(Boolean);
     const contextType = url.searchParams.get("contextType") || "";
     const contextName = url.searchParams.get("contextName");
@@ -244,12 +244,12 @@ export async function GET(
 
     if (listAll) {
       const topRows = rows.slice(0, 100);
-      const syncedRows = await Promise.all(topRows.map((row) => syncActionRun(octokit, row)));
+      const syncedRows = await Promise.all(topRows.map((row: any) => syncActionRun(octokit, row)));
 
       return Response.json({
         status: "success",
         message: "Action runs fetched successfully.",
-        data: syncedRows.map((row) => ({
+        data: syncedRows.map((row: any) => ({
           id: row.id,
           actionName: row.actionName,
           contextType: row.contextType,
@@ -281,18 +281,18 @@ export async function GET(
       });
     }
 
-    const topRowsByAction = actionNames.reduce<Record<string, typeof rows>>((accumulator, actionName) => {
+    const topRowsByAction = actionNames.reduce<Record<string, typeof rows>>((accumulator: any, actionName: string) => {
       accumulator[actionName] = rows
-        .filter((row) => row.actionName === actionName)
+        .filter((row: any) => row.actionName === actionName)
         .slice(0, 3);
       return accumulator;
     }, {});
 
     const syncedTopRowsByAction = Object.fromEntries(
       await Promise.all(
-        Object.entries(topRowsByAction).map(async ([actionName, actionRows]) => {
+        Object.entries(topRowsByAction).map(async ([actionName, actionRows]: [string, any]) => {
           const syncedRows = await Promise.all(
-            actionRows.map((row) => syncActionRun(octokit, row)),
+            actionRows.map((row: any) => syncActionRun(octokit, row)),
           );
           return [actionName, syncedRows] as const;
         }),
@@ -302,9 +302,9 @@ export async function GET(
     return Response.json({
       status: "success",
       message: "Action runs fetched successfully.",
-      data: actionNames.reduce<Record<string, any[]>>((accumulator, actionName) => {
+      data: actionNames.reduce<Record<string, any[]>>((accumulator: any, actionName: string) => {
         accumulator[actionName] = (syncedTopRowsByAction[actionName] || [])
-          .map((row) => ({
+          .map((row: any) => ({
             id: row.id,
             actionName: row.actionName,
             contextType: row.contextType,
