@@ -97,9 +97,6 @@ export function CreateCollectionDialog() {
       };
 
       const result = await createCollectionAction({
-        owner,
-        repo,
-        branch,
         collection: collectionYamlObject,
       });
 
