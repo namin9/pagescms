@@ -14,6 +14,8 @@ import mergeWith from "lodash.mergewith";
 import { buildCommitTokens, resolveCommitIdentity, resolveCommitMessage } from "@/lib/commit-message";
 import { requireApiUserSession } from "@/lib/session-server";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ owner: string, repo: string, branch: string, path: string }> }
